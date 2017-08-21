@@ -39,32 +39,3 @@ q:before, q:after {
 table {
   border-collapse: collapse;
   border-spacing: 0; }
-
-html, body {
-  width: 100%;
-  height: 100%;
-  min-width: 100%;
-  min-height: 100%; }
-
-div {
-  margin: 0px;
-  padding: 0px; }
-
-nav {
-  float: left;
-  height: 100%;
-  padding: 0px 30px;
-  width: 200px;
-  background-color: lightblue; }
-  nav h3 {
-    margin-top: 20px; }
-    nav h3 li {
-      margin: 4px 0px; }
-
-article {
-  float: left;
-  height: 100%;
-  width: calc(~'100% - 60px - '$sidebar-width); }
-
-.tool {
-  background-color: lightgray; }
