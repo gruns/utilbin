@@ -95,7 +95,6 @@ def optionToHTMLInputAttributes(option):
     # TODO(grun): Add or figure out a better way to determine the most
     # appropriate <option> type. See all <option> types here:
     #   https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
-    print('option', repr(option))
     present = option.value not in [None, True, False]
     value = '' if not present else f' value="{option.value}"'
     name = option.long.lstrip('-') if option.long else option.short.lstrip('-')
