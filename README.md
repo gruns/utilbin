@@ -29,10 +29,10 @@ Next, install utilbind's Python dependencies
 pip install furl curio flask docopt
 ```
 
-Finally, install Utilbin's two build dependencies: a C/C++ compiler toolchain
-and [Emscripten](https://github.com/kripken/emscripten), a toolchain that
-compiles C and C++ to Javascript, and [browserify](http://browserify.org/), a
-Javascript bundler.
+Finally, install Utilbin's build dependencies: a C/C++ compiler toolchain and
+[Emscripten](https://github.com/kripken/emscripten), a toolchain that compiles C
+and C++ to Javascript, and [browserify](http://browserify.org/), a Javascript
+bundler.
 
 On Debian machines, install a C/C++ compiler toolchain with
 
