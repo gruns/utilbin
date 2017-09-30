@@ -214,13 +214,13 @@ utilities. TODO(grun): Link to the `Utility` base class from this markdown
 document.
 
 
-### \__init\__.py
+### \_\_init\_\_.py
 
 With echo.py complete, it's time to turn the now-complete echo utility into a
 Python module and and connect it to utilbind.
 
-To do so, create a \__init__.py package file in the `echo/` directory with the
-contents:
+To do so, create a \_\_init\_\_.py package file in the `echo/` directory with
+the contents:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -236,7 +236,7 @@ from .echo import Echo
 Utility = Echo
 ```
 
-The key piece of this \__init__.py file is the `Utility` attribute, through
+The key piece of this \_\_init\_\_.py file is the `Utility` attribute, through
 which the echo utility is exported. In this manner, utilbind can discover,
 import, and use the new echo utility.
 
