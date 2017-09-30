@@ -67,6 +67,11 @@ class Utility:
     def buildWebDistribution(self):
         with changeDirectory(self.dirpath):
             self._buildWebDistribution()  # Implemented by subclass.
+            # TODO(grun): Minify the JS assets (with Closure Compiler?) if
+            # they're not already minified.
+            #for js in browserJSFiles:
+            #    self.minifyJS(js)
+            
 
     def buildNativeDistribution(self):
         with changeDirectory(self.dirpath):
