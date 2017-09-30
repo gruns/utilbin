@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <nav>
+      <br>
+      <h1>[U t i l b i n]</h1>
+
+      {% for category, utils in vars.utilsByCategory.items() %}
+        <h2>{{ category }}</h2>
+        <ul>
+          {% for util in utils %}
+          <li>
+            <a name="utility-iframe" href="/u/{{ util.name }}">
+              {{ util.displayName }}
+            </a>
+          </li>
+        {% endfor %}
+        </ul>
+      {% endfor %}
+    </nav>
+
+    <article>
+      {% block utility_body %}
+        
+      {% endblock %}
+    </article>
+{% endblock %}

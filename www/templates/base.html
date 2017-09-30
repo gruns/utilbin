@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    {% if vars.title %}
+ 	    <title>{{ vars.title }}</title>
+    {% endif %}
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+    {% for cssfile in vars.cssFiles %}
+      <link rel="stylesheet" type="text/css" href="{{ cssfile }}" />
+    {% endfor %}      
+
+    <!--[if lt IE 9]>
+    <script type="text/javascript" charset="utf-8"
+            src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+    {% block body %}
+    {% endblock %}
+
+    {% for jsfile in vars.jsFiles %}
+      <script type="text/javascript" src="{{ jsfile }}" ></script>
+    {% endfor %}     
+    <div id="mobile-flag"></div>
+  </body>
+</html>

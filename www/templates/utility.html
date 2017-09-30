@@ -1,0 +1,38 @@
+{% extends "sidebar.html" %}
+
+{% block utility_body %}
+  <form onsubmit="return false;">
+
+    {% if vars.takesInput %}
+      <textarea name="input" autofocus oninput="utilbin.onInputChange(this);"></textarea>
+    {% endif %}
+
+    {% for command, cmd in vars.commands.items() %}
+      <!-- method="get" action="http://127.0.0.1:4337/{{ vars.util.dirname }}/{{ command }}"> -->
+      {% for attrs in cmd.options %}
+        <span class="option-title">
+          {{ attrs.long.title() }}:
+        </span>
+        <input name="{{ attrs.long }}"
+               type="{{ attrs.type }}"
+               value="{{ attrs.value }}" />
+          <span class="option-description">
+            {{ attrs.description }}
+          </span>
+          <br/>
+      {% endfor %}
+      <button type="button"
+              {% if loop.first %}
+                selected
+              {% endif %}
+              name="{{ command }}"
+              value="{{ command }}"
+              onclick="utilbin.selectActionButton(this); utilbin.onInputChange(this);">
+        {{ command.title() }}
+      </button>
+    {% endfor %}
+
+    <textarea id="output" name="output"></textarea>
+
+  </form>
+{% endblock %}

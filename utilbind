@@ -1,0 +1,227 @@
+#!/usr/bin/env python3.6
+# -*- coding: utf-8 -*-
+
+# Copyright _!_
+#
+# License _!_
+#
+# Original author: Ansgar Grunseid
+
+import os
+import sys
+from subprocess import PIPE
+from importlib import import_module
+from contextlib import contextmanager
+from os.path import isdir, isfile, dirname, join as pjoin
+
+import curio
+import docopt
+from furl import furl
+from curio.subprocess import CalledProcessError
+from curio import Kernel, tcp_server, timeout_after, TaskTimeout
+
+from http_server import PlainHTTPServer, PlainHTTPSocketWrapper
+
+# TODO(grun): Add daemonize/nodaemon options.
+USAGE = """
+utilbind - Utility Bin Daemon
+
+Usage:
+  utilbind [-p <port>]
+  utilbind run <utility> [<utility-args>...]
+  utilbind build (all | <utility>) [web | native]
+
+Options:
+  --version                   Show version.
+  -p <port>, --port <port>    Port to bind to.
+  -h --help                   Show this help information.
+"""
+DEFAULT_PORT = 4337
+UTILITY_TIMEOUT = 5  # Seconds.
+UTILITIES_DIRECTORY = pjoin(dirname(__file__), 'utilities/')
+
+class InvalidUsage(NotImplementedError):
+    def __init__(self, message):
+        self.message = message
+
+def lget(l, index, default=None):
+    try:
+        return l[index]
+    except IndexError:
+        return default
+
+@contextmanager
+def printDoneOnCompletion(msg):
+    print(msg, end=' ', flush=True)
+    yield
+    print('done.')
+
+def urlToArgv(url):
+    argv = [
+        f'--{k}={v}' if v is not None else
+        (f'-{k}' if len(k) == 1 else f'--{k}')
+        for k, v in furl(url).args.allitems()]
+    return argv
+
+def loadUtility(name, *, webReady=False, nativeReady=False):
+    try:
+        module = import_module(f'utilities.{name}')  # ImportError.
+        utilCls = module.Utility  # AttributeError.
+    except (ImportError, AttributeError):
+        return None
+
+    util = utilCls()
+    if util and nativeReady and not os.access(util.nativeExePath, os.X_OK):
+        util = None
+    if util and webReady and not all(isfile(f) for f in util.browserJSPaths):
+        util = None
+
+    return util
+
+def discoverAllUtilities(*, webReady=False, nativeReady=False):
+    utils = [
+        loadUtility(name, webReady=webReady, nativeReady=nativeReady)
+        for name in os.listdir(UTILITIES_DIRECTORY)
+        if isdir(pjoin(UTILITIES_DIRECTORY, name))]
+    utils = [u for u in utils if u is not None]
+    return utils
+
+def defaultActionOf(util):
+    action = None
+
+    d = docopt
+    options = d.parse_defaults(util.usage)
+    patterns = d.parse_pattern(
+        d.formal_usage(d.printable_usage(util.usage)), options)
+
+    commands = [
+        p.children[0] for p in patterns.children
+        if type(p) is d.Required and type(p.children[0]) is d.Command]
+
+    if len(commands) == 1:
+        action = commands[0].name
+
+    return action
+
+
+async def runUtility(util, action=None, argv=None):  # Raises InvalidUsage.
+    success, stdout, stderr = False, None, None
+
+    # If no action was provide, but <util> only has one available action,
+    # default to that one, sole action.
+    action = action or defaultActionOf(util)
+
+    argv = [action] + argv if action else argv
+    if '-h' in argv or '--help' in argv:
+        return True, util.usage, None
+
+    try:
+        docopt.docopt(util.usage, argv, help=False)
+    except docopt.DocoptExit as e:
+        errmsg = f'Unrecognized argument(s) provided to {util.displayName}'
+        raise InvalidUsage(f'{errmsg}\n\n{util.usage}')
+
+    try:
+        async with timeout_after(UTILITY_TIMEOUT):
+            proc = await curio.subprocess.run(
+                [util.nativeExePath] + argv, stdout=PIPE, stderr=PIPE)
+    except TaskTimeout:
+        # TODO(grun): Raise a timeout exception for the caller.
+        print(f'Utility {util.name} timed out after {UTILITY_TIMEOUT} seconds.')
+    except CalledProcessError as e:
+        # TODO(grun): Raise a utility run failed exception for the caller.
+        print(
+            f'Utility {util.name} returned with non-zero retcode: '
+            f'{e.returncode}.')
+    else:
+        success = (proc.returncode == 0)
+        stdout, stderr = util.processOutput(proc.stdout, proc.stderr)
+
+    return success, stdout, stderr
+
+async def runUtilityCLI(cli):
+    name = cli.get('<utility>')
+    util = loadUtility(name)
+    if util:
+        argv = cli.get('<utility-args>')
+        action = None if lget(argv, 0, '-').startswith('-') else argv.pop(0)
+        try:
+            success, stdout, stderr = await runUtility(util, action, argv)
+        except InvalidUsage as e:
+            print(e.message)
+        else:
+            if success:
+                print(stdout, end='')
+                if stderr:
+                    print(f'\nstderr: {stderr}', end='')
+    else:
+        print(f'No such utility named "{name}".')
+
+def buildUtilitiesCLI(cli):
+    tobuild = []
+
+    name = cli.get('<utility>')
+    if name:
+        util = loadUtility(name)
+        if util:
+            tobuild.append(util)
+        else:
+            print(f'No such utility named "{name}".')
+    elif cli.get('all'):
+        tobuild = discoverAllUtilities(webReady=False, nativeReady=False)
+
+    both = (not cli.get('web') and not cli.get('native'))
+    for util in tobuild:
+        if cli.get('web') or both:
+            with printDoneOnCompletion(f'Building {util.name} web...'):
+                util.buildWebDistribution()
+        if cli.get('native') or both:
+            with printDoneOnCompletion(f'Building {util.name} native...'):
+                util.buildNativeDistribution()
+
+class UtilbinRequestHandler(PlainHTTPSocketWrapper):
+    async def handleRequest(self, req):
+        f = furl(req.target.decode('utf8'))
+        argv = urlToArgv(f.url)
+        name = f.path.segments[0]
+        action = lget(f.path.segments, 1)
+
+        util = loadUtility(name)
+        if util:
+            try:
+                success, stdout, stderr = await runUtility(util, action, argv)
+            except InvalidUsage as e:
+                await self.sendTextResponse(400, e.message)
+            else:
+                if success and stdout is not None:
+                    await self.sendTextResponse(200, stdout)
+        else:
+            await self.sendTextResponse(404, 'Utility not found')
+
+def listenServerCLI(cli):
+    interface = '127.0.0.1'
+    port = int(cli.get('--port') or '0') or DEFAULT_PORT
+    print(f'Listening for requests on http://{interface}:{port}/...')
+
+    server = PlainHTTPServer(UtilbinRequestHandler)
+    if cli.get('[TODO-DAEMON-MODE]'):  # Daemon mode.
+        raise NotImplementedError  # TODO(grun): Implement daemonization.
+    else:  # Listen mode.
+        server.serveForever(interface, port)  # Starts the curio kernel.
+
+def main():
+    try:
+        cli = docopt.docopt(USAGE, sys.argv[1:], options_first=True)
+    except docopt.DocoptExit:
+        print('Unrecognized argument(s) provided.\n')
+        raise  # Exits this program; DocoptExit is a subclass of SystemExit.
+
+    if cli.get('run'):
+        curio.run(runUtilityCLI, cli)
+    elif cli.get('build'):
+        buildUtilitiesCLI(cli)
+    else:  # Daemon and listen mode.
+        listenServerCLI(cli)
+
+if __name__ == '__main__':
+    main()
