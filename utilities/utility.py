@@ -71,7 +71,6 @@ class Utility:
             # they're not already minified.
             #for js in browserJSFiles:
             #    self.minifyJS(js)
-            
 
     def buildNativeDistribution(self):
         with changeDirectory(self.dirpath):
