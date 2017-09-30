@@ -216,11 +216,11 @@ document.
 
 ### \_\_init\_\_.py
 
-With echo.py complete, it's time to turn the now-complete echo utility into a
-Python module and and connect it to utilbind.
+With echo.py complete, it's time to turn the `echo/` directory into a Python
+module and and connect it to utilbind.
 
-To do so, create a \_\_init\_\_.py package file in the `echo/` directory with
-the contents:
+To do so, create a \_\_init\_\_.py file in the `echo/` directory with the
+contents:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -243,23 +243,11 @@ import, and use the new echo utility.
 
 ### Final testing
 
-With the `echo/` complete, it's time to build and test the utility. Build the
-web version with
+The `echo/` directory is now complete. It's time to build and test the
+utility. Build both the web version and the native version with
 
 ```console
-$ utilbind build echo web
-```
-
-and the native version with
-
-```console
-$ ./utilbind build echo native
-```
-
-Both can be built with
-
-```console
-$ ./utilbind build echo
+$ utilbind build echo
 ```
 
 Once built, test the echo utility via utilbin's CLI.
@@ -272,7 +260,7 @@ sup
 Via the REST API.
 
 ```console
-$ curl -d "sup" http://127.0.0.1:4337/echo/mirror
+$ curl -d "input=sup" http://127.0.0.1:4337/echo/mirror
 sup
 ```
 
@@ -281,4 +269,4 @@ And via the web GUI.
   * http://127.0.0.1:5050/u/echo
 
 And that's it. Congratulations! You've successfully added a utility, with both
-web and native versions, to utilbin.
+web and native versions, to Utilbin.
