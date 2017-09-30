@@ -73,7 +73,7 @@ be built with
 utilbind build <utility> [web | native]
 ```
 
-To build every utility for the web and native, run
+To build every utility, for both the web and native, run
 
 ```
 utilbind build all
