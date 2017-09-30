@@ -126,5 +126,5 @@ and load `http://127.0.0.1:5050/` in your browser.
 
 ### Add a Utility
 
-To add a new utility to Utilbin, follow the [Add Utility](add_utility.md)
+To add a new utility to Utilbin, follow the [Add Utility](Add_Utility.md)
 instructions and submit a pull request.
