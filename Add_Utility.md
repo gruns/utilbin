@@ -41,11 +41,11 @@ create and configure later.
 
 In `echo.py`, we need to declare a Python subclass of the `Utility` class, which
 is defined in `utilbin/utilities/utility.py`. `TextUtility`, also a subclass of
-the `Utility` class, is useful, pre-defined base class in utility.py that's
-useful to subclass instead of `Utility` as `TextUtility` handles encoding and
-decoding to UTF8 (as opposed to binary data, for instance).
+the `Utility` class, is a useful, pre-defined base class to subclass instead of
+`Utility` for text utilities, like echo. `TextUtility` automatically handles
+encoding and decoding input and output to UTF8.
 
-Fill echo.py with these contents:
+Next, fill echo.py with these contents:
 
 ```python
 # -*- coding: utf-8 -*-
@@ -92,19 +92,20 @@ Let's step through this file to examine the key pieces.
 
 ### Usage
 
-`Utility.usage` is a multiline [docopt](http://docopt.org/) string that defines
-the utility's usage across the web GUI (`http://utilbin.com/u/echo`), the REST
-API (`http://utilbin.com/echo`), and the CLI (`./utilbind run echo`).
+`Echo.usage` is a multiline [docopt](http://docopt.org/) string that defines the
+utility's usage across every interface: the web GUI
+(`http://utilbin.com/u/echo`), the REST API (`http://utilbin.com/echo`), and the
+CLI (`./utilbind run echo`).
 
-Below, in curly braces (`{` and `}`), are the fields extracted from the docopt
-usage string by utilbind.
+Below, between curly braces (`{` and `}`), are the fields extracted from the
+docopt usage string by utilbind.
 
 ```python
 USAGE = """{Human Readable Utility Name}
 
 Usage:
   ignored {action1} {[INPUT]}
-  ignored {action2{ {[INPUT]} {[options]}
+  ignored {action2} {[INPUT]} {[options]}
 
 Options:
   {-o, --option   Option text.}
@@ -112,17 +113,16 @@ Options:
 ```
 
 The first line, `{Human Readable Utility Name}` is the human-readable display
-name of the utility displayed to humans, like in the web GUI's HTML. For the
-echo utility, this display name is `Echo`.
+name of the utility. This display name is displayed to humans, like in the web
+GUI's HTML. For the echo utility, this display name is `Echo`.
 
-Each line under `Usage:` declares the actions made available by this utility and
-the options they take. A utility can have multiple actions, like 'encode' and
-'decode' for a base64 codec, or only one action, like 'generate' for a password
-generator. Each action in the usage string appears as a button in the web
-GUI. For example, the base64 codec's
+Each line under `Usage:` declares the actions available to this utility and the
+options those actions take. A utility can have multiple actions, like 'encode'
+and 'decode' for a codec, or only one action, like 'generate' for a password
+generator. Every utility needs at least one action.
 
-The `[INPUT]` positional argument is a special positional argument value that
-indicates this utility takes input. If `[INPUT]` is omitted, like
+The `[INPUT]` positional argument is a special positional argument that
+indicates this utility takes input. If `[INPUT]` is omitted, like in
 
 ```
 Usage:
@@ -130,9 +130,9 @@ Usage:
 ```
 
 then no <textarea> input box will be presented in the web GUI and no input data
-accepted via the REST API or CLI. Utilities with options but without the
-`[INPUT]` positional argument usually generate, not process, data. Examples
-include password generators, UUID generators, etc.
+will be accepted via the REST API or CLI. Utilities without the `[INPUT]`
+positional argument usually generate, not process, data. Examples include
+password generators, UUID generators, etc.
 
 Options enumerated under `Options:` are made available in the web GUI, REST API,
 and CLI. For example
@@ -157,7 +157,7 @@ $ ./utilbind run password_generator generate --length=5
 bazut
 ```
 
-`[options]` is docopt shortcut option which means all options.
+`[options]` is docopt shortcut option which means all options under `Options:`.
 
   > "[options]" is a shortcut that allows to avoid listing all options (from
   > list of options with descriptions) in a pattern.
@@ -165,10 +165,12 @@ bazut
 
 ### Utility Subclass
 
-The `Utility` class defines the metadata and build behavior of the utility. For
-the simple echo utility
+The `TextUtility` parent class defines the metadata and build behavior of the
+utility.
 
 ```
+from ..utility import Category, TextUtility
+
 class Echo(TextUtility):
     usage = USAGE
     nativeExecutable = 'echo'
@@ -187,34 +189,37 @@ class Echo(TextUtility):
         subprocess.run(cmd, shell=True, check=True) # Raises CalledProcessError.
 ```
 
-`usage` is the docopt usage string.
+Here are the important attributes and methods:
 
-`nativeExecutable` is the name of the native executable, built in
-`_buildNativeDistribution()`, run via the REST API and utilbin's CLI.
+  - `usage` is the docopt usage string.
 
-`category` is the appropriate enumeration value to categorize this app. The
-utility is displayed under this category in the web GUI.
+  - `nativeExecutable` is the name of the native executable, built in
+    `_buildNativeDistribution()`, run via the REST API and utilbin's CLI.
 
-`browserJSFiles` is a list of all the Javascript files this utility needs to run
-in the browser. These Javascript files are often built (e.g. with emscripten) or
-bundled (e.g. with browserify, webpack, etc) in `_buildWebDistribution()`.
+  - `category` is the appropriate enumeration value to categorize this app. The
+    utility is displayed under this category in the web GUI.
 
-`_buildWebDistribution()` and `_buildNativeDistribution()` are the methods run
-to build the native executable(s) and web assets for the utility. These methods
-are run via `./utilbind build [...]` to build and package utilities.
+  - `browserJSFiles` is a list of all the Javascript files this utility needs to
+    run in the browser. These Javascript files are often built (e.g. with
+    emscripten) or bundled (e.g. with browserify, webpack, etc) in
+    `_buildWebDistribution()`.
+
+  - `_buildWebDistribution()` and `_buildNativeDistribution()` are the methods
+    run to build the native executable(s) and web assets for the utility. These
+    methods are run via `./utilbind build [...]` to build and package utilities.
 
 See the `Utility` base class in `utilbin/utilities/utility.py` for more
-attributes to control utilities. The attributes and methods above are the basics
-for simple utilities. TODO(grun): Link to the `Utility` base class from this
-markdown document.
+details. The attributes and methods above are the basics and suffice for simple
+utilities. TODO(grun): Link to the `Utility` base class from this markdown
+document.
 
 
-### __init__.py
+### \__init\__.py
 
-With echo.py established, it's time to turn the now-complete echo utility into a
-Python module and and connect it with utilbind.
+With echo.py complete, it's time to turn the now-complete echo utility into a
+Python module and and connect it to utilbind.
 
-To do so, create a __init__.py package file in the `echo/` directory with the
+To do so, create a \__init__.py package file in the `echo/` directory with the
 contents:
 
 ```python
@@ -231,9 +236,9 @@ from .echo import Echo
 Utility = Echo
 ```
 
-The key piece of this __init__.py file is the `Utility` attribute, through which
-the echo utility is exported. In this manner, utilbind can discover, import, and
-use the new echo utility.
+The key piece of this \__init__.py file is the `Utility` attribute, through
+which the echo utility is exported. In this manner, utilbind can discover,
+import, and use the new echo utility.
 
 
 ### Final testing
