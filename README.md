@@ -96,8 +96,8 @@ ratipatawojorokepafu
 ```
 
 In addition to providing a CLI to build and run utilities, utilbind is also an
-HTTP daemon that handles REST requests. To start the REST server in listen mode
-(non-daemonizedd server mode), run
+HTTP daemon that listens for and processes REST requests. To start the REST
+server in listen mode (non-daemonizedd server mode), run
 
 ```
 ./utilbind
@@ -114,8 +114,8 @@ nawibolaxoqoriyatade
 
 ### Run Utilbin's Frontend Web Server
 
-Once web versions of the utilities have been built (they can be built with
-`./utilbind build all web`), fire up the frontend web server with
+Once web versions of the utilities have been built (with `./utilbind build all
+web`), fire up the frontend web server with
 
 ```
 $ ./www.py
