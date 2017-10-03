@@ -24,26 +24,69 @@ which the utility becomes accessible on utilbin.com, both in the GUI at
 `utilities/echo/` directory will become available at
 `http://utilbin.com/u/echo/` (GUI) and `http://utilbin.com/echo/` (REST API).
 
-### Python Utility Class
 
-In the new `echo/` directory, create a new, blank Python file named
-`echo.py`. This Python file will define the behavior and build processes of the
-echo utility.
+### Utility
 
-```shell
-$ touch echo.py
-$ $EDITOR echo.py
+For the echo utility itself, a simple C program that reads from stdin and writes
+to stdout will suffice. In the new `echo/` directory, create a new C file named
+`echo.c` with the contents:
+
+```
+// Copyright _!_
+//
+// License _!_
+//
+// Original author: Ansgar Grunseid
+
+#include <stdio.h>
+#include <string.h>
+
+#define BUFSIZE 65536
+
+int mirror(char *s, char *outbuf) {
+  strcpy(outbuf, s);
+  return strlen(s);
+}
+
+int main(int argc, char **argv) {
+  if (argc < 2 || argc > 3 || !!strcmp(argv[1], "mirror"))
+    return -1;
+
+  int nbytes;
+  char buf[BUFSIZE];
+  if (argc == 3)
+    printf("%s", argv[2]);
+  else
+    while (!feof(stdin))
+      if ((nbytes = fread(buf, 1, BUFSIZE, stdin)) >= 0 && !ferror(stdin))
+        fprintf(stdout, buf, nbytes);
+
+  return 0;
+}
 ```
 
+All utilities must read from from stdin and write to stdout because utilbind
+spawns utilities, like echo.c, as subprocesses and communicates with them over
+the standard streams (stdin and stdout).
+
+Beyond stdin and stdout, the `mirror()` function is independently declared to be
+exported to Javascript by emscripten (more on that below).
+
+
+### Python Utility Class
+
+Also in the `echo/` directory, create a new Python file named `echo.py`. This
+Python file will define the behavior and build processes of the echo utility.
+
 The name of this Python file, `echo.py`, doesn't matter -- it will be loaded by
-utilbind through the package file `utilities/echo/__init__.py`, which we'll
-create and configure later.
+utilbind through the Python package file `utilities/echo/__init__.py`, which
+we'll create and configure later.
 
 In `echo.py`, we need to declare a Python subclass of the `Utility` class, which
-is defined in `utilbin/utilities/utility.py`. `TextUtility`, also a subclass of
-the `Utility` class, is a useful, pre-defined base class to subclass instead of
-`Utility` for text utilities, like echo. `TextUtility` automatically handles
-encoding and decoding input and output to UTF8.
+is defined in `utilbin/utilities/utility.py`. `TextUtility`, itself a subclass
+of the `Utility` class, is a useful, pre-defined base class for text utilities,
+like echo, that automatically handles encoding and decoding input and output to
+UTF8.
 
 Next, fill echo.py with these contents:
 
