@@ -44,7 +44,7 @@ To install Emscripten, follow Emscripten's installation instructions here:
 
   * https://kripken.github.io/emscripten-site/docs/getting_started/downloads.html
 
-Installation of Emscripten on Linux/OS X will look similar to
+Installation of Emscripten on Linux and OS X will look similar to
 
 ```console
 $ wget https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
