@@ -10,8 +10,8 @@ The goal of utilbin is threefold:
   2. Provide programmatic access to hosted utilities over a simple REST
      interface.
 
-  3. Build in-browser (e.g. Javascript or WebAssembly) versions of every utility
-     for local use, like with sensitive data that can't leave corporate
+  3. Build in-browser (e.g. Javascript and/or WebAssembly) versions of every
+     utility for local use, like with sensitive data that can't leave corporate
      firewalls.
 
 
