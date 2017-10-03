@@ -247,9 +247,9 @@ Here are the important attributes and methods:
     emscripten, or bundled, like with browserify or webpak, in
     `_buildWebDistribution()`.
 
-  - `_buildWebDistribution()` and `_buildNativeDistribution()` are the methods
-    run to build the native executable(s) and web assets for the utility. These
-    methods are run via `./utilbind build [...]` to build and package utilities.
+  - `_buildWebDistribution()` and `_buildNativeDistribution()` build the
+    utility's native executable(s) and web assets, respectively. These methods
+    are run via `./utilbind build [...]`.
 
 See the `Utility` base class in `utilbin/utilities/utility.py` for more
 details. The attributes and methods above are the basics and suffice for simple
