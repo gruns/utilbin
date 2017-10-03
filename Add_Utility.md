@@ -31,7 +31,7 @@ For the echo utility itself, a simple C program that reads from stdin and writes
 to stdout will suffice. In the new `echo/` directory, create a new C file named
 `echo.c` with the contents:
 
-```
+```c
 // Copyright _!_
 //
 // License _!_
