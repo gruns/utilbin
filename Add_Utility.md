@@ -234,7 +234,7 @@ class Echo(TextUtility):
 
 Here are the important attributes and methods:
 
-  - `usage` is the docopt usage string.
+  - `usage` is the [docopt](http://docopt.org/) usage string.
 
   - `nativeExecutable` is the name of the native executable, built in
     `_buildNativeDistribution()`, run via the REST API and utilbin's CLI.
