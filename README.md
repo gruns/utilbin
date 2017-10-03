@@ -107,7 +107,7 @@ Listening for requests on http://127.0.0.1:4337/...
 And request away
 
 ```console
-$ curl http://localhost:4337/password_generator?length=20
+$ curl "http://localhost:4337/password_generator?length=20"
 nawibolaxoqoriyatade
 ```
 
