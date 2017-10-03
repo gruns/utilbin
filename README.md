@@ -19,13 +19,13 @@ The goal of utilbin is threefold:
 
 To run Utilbin locally, first checkout Utilbin.
 
-```
+```console
 git clone https://github.com/gruns/utilbin.git
 ```
 
 Next, install utilbind's Python dependencies
 
-```
+```console
 pip install furl curio flask docopt
 ```
 
@@ -36,7 +36,7 @@ bundler.
 
 On Debian machines, install a C/C++ compiler toolchain with
 
-```
+```console
 apt install build-essential
 ```
 
@@ -46,7 +46,7 @@ To install Emscripten, follow Emscripten's installation instructions here:
 
 Installation of Emscripten on Linux/OS X will look similar to
 
-```
+```console
 $ wget https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 $ tar xf emsdk-portable.tar.gz
 $ cd emsdk-portable/
@@ -58,7 +58,7 @@ $ ln -s "$(find $(pwd) -type f -name 'emcc')" /somewhere/in/your/path/emcc
 
 Install browserify with
 
-```
+```console
 npm install -g browserify
 ```
 
@@ -69,14 +69,14 @@ With Utilbin checked out and the build dependencies installed, it's time to
 build some utilities -- for web and native execution. Individual utilities can
 be built with
 
-```
-utilbind build <utility> [web | native]
+```console
+./utilbind build <utility> [web | native]
 ```
 
 To build every utility, for both the web and native, run
 
-```
-utilbind build all
+```console
+./utilbind build all
 ```
 
 
@@ -84,13 +84,13 @@ utilbind build all
 
 Individual utilities can be run via utilbin's Command Line Interface (CLI) with
 
-```
+```console
 ./utilbind run <utility> <utility-args>
 ```
 
 For example, to generate a random password, run
 
-```
+```console
 $ ./utilbind run password_generator --length=20
 ratipatawojorokepafu
 ```
@@ -99,14 +99,14 @@ In addition to providing a CLI to build and run utilities, utilbind is also an
 HTTP daemon that listens for and processes REST requests. To start the REST
 server in listen mode (non-daemonizedd server mode), run
 
-```
+```console
 ./utilbind
 Listening for requests on http://127.0.0.1:4337/...
 ```
 
 And request away
 
-```
+```console
 $ curl http://localhost:4337/password_generator?length=20
 nawibolaxoqoriyatade
 ```

@@ -11,7 +11,7 @@ back. We'll call this little utility 'echo'.
 First, create a new `echo/` directory under the `utilities/` directory. All
 utilities live in their own directory in the `utilities/` parent directory.
 
-```shell
+```console
 $ cd utilities/
 $ mkdir echo
 $ cd echo/
@@ -190,12 +190,12 @@ Options:
 
 adds the `-l` and `--length` options.
 
-```
+```console
 $ curl http://utilbin.com/password_generator/generate?l=5
 caluq
 ```
 
-```
+```console
 $ ./utilbind run password_generator generate --length=5
 bazut
 ```
@@ -211,7 +211,7 @@ bazut
 The `TextUtility` parent class defines the metadata and build behavior of the
 utility.
 
-```
+```python
 from ..utility import Category, TextUtility
 
 class Echo(TextUtility):
