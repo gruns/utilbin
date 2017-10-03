@@ -110,7 +110,7 @@ class Utility:
     # to decouple the concurrency management used in utilbind (e.g. curio) from
     # requirements to build and use individual utilities. If, in the future,
     # this decoupling only proves a hindrance, like to build multiple tools in
-    # parallel, re-examine this decision.
+    # parallel, re-examine this restriction.
     @abstractmethod
     def _buildWebDistribution(self):
         pass
