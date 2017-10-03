@@ -9,8 +9,8 @@
 import os
 import sys
 import stat
+from abc import ABC
 from enum import Enum
-from abc import abstractmethod
 from contextlib import contextmanager
 from os.path import dirname, basename, join as pjoin
 
@@ -35,7 +35,7 @@ class Category(Enum):  # Attribute value is the category name displayed in HTML.
     MISCELLANEOUS = 'Miscellaneous'
 
 
-class Utility:
+class Utility(ABC):
     """
     Provide a generic interface to run various utilities, which have
     wildly different requirements for their languages, runtimes, setup,
@@ -48,19 +48,15 @@ class Utility:
     category = Category.MISCELLANEOUS
     nativeExecutable = 'Undefined Native Executable'  # Native executable name.
 
-    @abstractmethod
     def setup(self):
         pass
 
-    @abstractmethod
     def processArguments(self, args, kwargs):
         return args, kwargs
 
-    @abstractmethod
     def processOutput(self, stdout, stderr):
         return stdout, stderr  # Passthrough.
 
-    @abstractmethod
     def teardown(self):
         pass
 
@@ -111,11 +107,9 @@ class Utility:
     # requirements to build and use individual utilities. If, in the future,
     # this decoupling only proves a hindrance, like to build multiple tools in
     # parallel, re-examine this restriction.
-    @abstractmethod
     def _buildWebDistribution(self):
         pass
 
-    @abstractmethod
     def _buildNativeDistribution(self):
         pass
 
