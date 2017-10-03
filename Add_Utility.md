@@ -36,7 +36,7 @@ to stdout will suffice. In the new `echo/` directory, create a new C file named
 //
 // License _!_
 //
-// Original author: Ansgar Grunseid
+// Original author: [Your name here]
 
 #include <stdio.h>
 #include <string.h>
