@@ -177,8 +177,8 @@ will be accepted via the REST API or CLI. Utilities without the `[INPUT]`
 positional argument usually generate, not process, data. Examples include
 password generators, UUID generators, etc.
 
-Options enumerated under `Options:` are made available in the web GUI, REST API,
-and CLI. For example
+Options enumerated under `Options:` are made available in the web GUI, CLI, and
+REST API. For example
 
 ```
 Usage:
@@ -237,14 +237,14 @@ Here are the important attributes and methods:
   - `usage` is the [docopt](http://docopt.org/) usage string.
 
   - `nativeExecutable` is the name of the native executable, built in
-    `_buildNativeDistribution()`, run via the REST API and utilbin's CLI.
+    `_buildNativeDistribution()`, run via utilbin's CLI and REST API.
 
   - `category` is the appropriate enumeration value to categorize this app. The
     utility is displayed under this category in the web GUI.
 
   - `browserJSFiles` is a list of all the Javascript files this utility needs to
-    run in the browser. These Javascript files are often built (e.g. with
-    emscripten) or bundled (e.g. with browserify, webpack, etc) in
+    run in the browser. These Javascript files are often built, like with
+    emscripten, or bundled, like with browserify or webpak, in
     `_buildWebDistribution()`.
 
   - `_buildWebDistribution()` and `_buildNativeDistribution()` are the methods
