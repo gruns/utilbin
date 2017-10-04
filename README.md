@@ -26,7 +26,7 @@ git clone https://github.com/gruns/utilbin.git
 Next, install Utilbin's Python dependencies
 
 ```console
-pip install furl curio flask docopt
+pip install furl curio flask
 ```
 
 Finally, install Utilbin's build dependencies: a C/C++ compiler toolchain,

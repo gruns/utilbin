@@ -11,6 +11,7 @@ import os
 import re
 import time
 import os.path
+from functools import wraps
 from importlib.machinery import SourceFileLoader
 from os.path import isdir, dirname, join as pjoin
 
@@ -46,21 +47,22 @@ def getAllUtilitiesByCategory():
         byCategory.setdefault(util.category.value, []).append(util)
     return byCategory
 
-# Quick and dirty monkeypatching of docopt's Option parsing code to add option
-# descriptions to Option objects.
+# Quick and dirty monkeypatching of docopt to
+#
+#   1) Add option descriptions to Option objects. These option descriptions are
+#      later presented to Utilbin users.
+#
+#   2) Expose the command name given in usage strings, e.g. 'command' of
+#
+#        Usage:
+#          command action [options]
+#
+#      These command names are later used to expose the utility's actions in
+#      Utilbin's API.
 #
 # TODO(grun): Integrate description parsing into docopt directly and push these
 # changes upstream so parsed, cleaned descriptions are available on Option
 # objects in future docopt releases.
-#
-# parse_section() below was taken from the latest version of docopt on Github
-# (https://github.com/docopt/docopt), which has yet to be published to PyPI.
-def parse_section(name, source):
-    pattern = re.compile(
-        '^([^\n]*' + name + '[^\n]*\n?(?:[ \t].*?(?:\n|$))*)',
-        re.IGNORECASE | re.MULTILINE)
-    return [s.strip() for s in pattern.findall(source)]
-
 def extractOptionDescription(line):
     _, _, description = line.strip().partition('  ')
     description = re.sub('\s*\[default: .*\]', '', description).strip()
@@ -69,7 +71,7 @@ def extractOptionDescription(line):
 def parseDocoptOptions(usage):
     defaults = []
 
-    for s in parse_section('options:', usage):
+    for s in docopt.parse_section('options:', usage):
         # FIXME corner case "bla: options: --foo"
         _, _, s = s.partition(':')  # get rid of "options:"
         split = re.split('\n[ \t]*(-\S+?)', '\n' + s)[1:]
@@ -152,8 +154,7 @@ def usageToHTMLFormFields(usage):
     commands = {}
 
     allOptions = parseDocoptOptions(usage)
-    patterns = d.parse_pattern(
-        d.formal_usage(d.printable_usage(usage)), allOptions)
+    patterns = d.parse_pattern(d.formal_usage(usage), allOptions)
 
     # Remove --help and --version options.
     allOptions = [
@@ -176,7 +177,7 @@ def usageToHTMLFormFields(usage):
             type(o.children[0]) is d.Argument and o.children[0].name == 'INPUT'
             for o in optionals)
 
-        if any(type(o.children[0]) is d.AnyOptions for o in optionals):
+        if any(type(o.children[0]) is d.OptionsShortcut for o in optionals):
             cmdOptions = [
                 optionToHTMLInputAttributes(o)
                 for o in allOptions if type(o) not in [d.Command, d.Argument]]

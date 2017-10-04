@@ -1,6 +1,8 @@
 {% extends "sidebar.html" %}
 
 {% block utility_body %}
+  <h1>{{ vars.util.displayName}}</h1>
+
   <form onsubmit="return false;">
 
     {% if vars.takesInput %}
@@ -24,6 +26,9 @@
       <button type="button"
               {% if loop.first %}
                 selected
+              {% endif %}
+              {% if not vars.takesInput %}
+                autofocus
               {% endif %}
               name="{{ command }}"
               value="{{ command }}"

@@ -12,7 +12,7 @@ import stat
 from abc import ABC
 from enum import Enum
 from contextlib import contextmanager
-from os.path import dirname, basename, join as pjoin
+from os.path import isfile, dirname, basename, join as pjoin
 
 @contextmanager
 def changeDirectory(path):
@@ -72,6 +72,12 @@ class Utility(ABC):
         with changeDirectory(self.dirpath):
             self._buildNativeDistribution()  # Implemented by subclass.
         makeExecutable(self.nativeExePath)
+
+    def isWebReady(self):
+        return all(isfile(f) for f in self.browserJSPaths)
+
+    def isNativeReady(self):
+        return os.access(self.nativeExePath, os.X_OK)
 
     # TODO(grun): Change the <name> and <displayName> variable names to better
     # describe their purpose. displayName is apt enough; just 'name' is

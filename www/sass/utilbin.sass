@@ -25,6 +25,12 @@ nav
   width: $sidebar-width
   background-color: lightblue
 
+  h1
+    font-size: 1.3em
+  hr
+    border: none
+    border-top: 1px solid #8c8b8b
+  
   h2
     font-size: 18px
     margin-top: 20px
@@ -34,11 +40,14 @@ nav
       
 article
   float: left
-  height: 100%
   margin: 20px
   width: calc(~'100% - 60px - '$sidebar-width)
 
+  h1
+    font-size: 1.3em
+
   form
+    margin-top: 20px
     span.option-title
       margin-right: 6px
     input[type=text]
@@ -49,24 +58,27 @@ article
       outline: 0
       border: none
       cursor: pointer
-      margin: 8px auto
       background: #ccc
       padding: 12px 24px
       border-radius: 4px
       text-decoration: none
+      margin: 10px 6px 10px 0px
     button[type=button]:hover
       background: #d9d9d9
+    button[type=button]:active
+      background: #bbb
     button[selected]
       color: #fff
       background: #6699ff
     button[selected]:hover
       background: #73a3ff
+    button[selected]:active
+      background: #5588ee
 
   textarea
     width: 100%
     height: 80px
     resize: none
-    margin-top: 20px  
 
 .tool
   background-color: lightgrey

@@ -20,7 +20,7 @@ from ..utility import Category, TextUtility
 USAGE = """Password Generator
 
 Usage:
-  password_generator generate [options]
+  password generate [options]
 
 Options:
   -l <length>, --length=<length>   Password length, in characters [default: 16].

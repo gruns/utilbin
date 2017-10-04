@@ -8,33 +8,35 @@
 # Original author: Ansgar Grunseid
 
 import os
+import re
 import sys
 from subprocess import PIPE
 from importlib import import_module
 from contextlib import contextmanager
-from os.path import isdir, isfile, dirname, join as pjoin
+from os.path import isdir, dirname, join as pjoin
 
 import curio
 import docopt
 from furl import furl
+from curio import timeout_after, TaskTimeout
 from curio.subprocess import CalledProcessError
-from curio import Kernel, tcp_server, timeout_after, TaskTimeout
 
 from http_server import PlainHTTPServer, PlainHTTPSocketWrapper
 
 # TODO(grun): Add daemonize/nodaemon options.
 USAGE = """
-utilbind - Utility Bin Daemon
+utilbind - Utility Bin
 
 Usage:
   utilbind [-p <port>]
-  utilbind run <utility> [<utility-args>...]
+  utilbind list [api | utilities]
   utilbind build (all | <utility>) [web | native]
+  utilbind run <resource> [<action> [<action-args>...]]
 
 Options:
   --version                   Show version.
-  -p <port>, --port <port>    Port to bind to.
   -h --help                   Show this help information.
+  -p <port>, --port <port>    Port to bind to in listen mode.
 """
 DEFAULT_PORT = 4337
 UTILITY_TIMEOUT = 5  # Seconds.
@@ -63,53 +65,64 @@ def urlToArgv(url):
         for k, v in furl(url).args.allitems()]
     return argv
 
-def loadUtility(name, *, webReady=False, nativeReady=False):
+def loadUtility(name):
+    util = None
+
     try:
         module = import_module(f'utilities.{name}')  # ImportError.
         utilCls = module.Utility  # AttributeError.
     except (ImportError, AttributeError):
-        return None
-
-    util = utilCls()
-    if util and nativeReady and not os.access(util.nativeExePath, os.X_OK):
-        util = None
-    if util and webReady and not all(isfile(f) for f in util.browserJSPaths):
-        util = None
+        pass
+    else:
+        util = utilCls()
 
     return util
 
 def discoverAllUtilities(*, webReady=False, nativeReady=False):
     utils = [
-        loadUtility(name, webReady=webReady, nativeReady=nativeReady)
+        loadUtility(name)
         for name in os.listdir(UTILITIES_DIRECTORY)
         if isdir(pjoin(UTILITIES_DIRECTORY, name))]
-    utils = [u for u in utils if u is not None]
+
+    utils = [
+        u for u in utils if u is not None and
+        (not webReady or u.isWebReady()) and
+        (not nativeReady or u.isNativeReady())]
+
     return utils
 
-def defaultActionOf(util):
-    action = None
+def defaultResourceAction(api, resource):
+    if len(api.get(resource, {})) == 1:
+        return list(api[resource].keys())[0]
+    return None
 
-    d = docopt
-    options = d.parse_defaults(util.usage)
-    patterns = d.parse_pattern(
-        d.formal_usage(d.printable_usage(util.usage)), options)
+def extractAPIResourcesAndActions(util):
+    resourcesAndActions = []
+    validAPIString = lambda s: re.match('^[a-zA-Z0-9_]+[a-zA-Z0-9_-]*$', s)
 
-    commands = [
-        p.children[0] for p in patterns.children
-        if type(p) is d.Required and type(p.children[0]) is d.Command]
+    usage = lget(docopt.parse_section('usage:', util.usage), 0, '')
+    usage = usage.split(':', 1)[-1]  # Drop 'Usage:'.
+    for line in usage.strip().splitlines():
+        tokens = line.split()
+        resource = lget(tokens, 0, '')
+        action = lget(tokens, 1, '')
+        if validAPIString(resource) and validAPIString(action):
+            resourcesAndActions.append((resource, action))
 
-    if len(commands) == 1:
-        action = commands[0].name
+    return resourcesAndActions
 
-    return action
+def buildAPI(utils):
+    d = {}
+    resourcesAndActions = [
+        (resource, action, util) for util in utils
+        for resource, action in extractAPIResourcesAndActions(util)]
+    for resource, action, util in resourcesAndActions:
+        d.setdefault(resource, {})[action] = util
+    return d
 
 
 async def runUtility(util, action=None, argv=None):  # Raises InvalidUsage.
     success, stdout, stderr = False, None, None
-
-    # If no action was provide, but <util> only has one available action,
-    # default to that one, sole action.
-    action = action or defaultActionOf(util)
 
     argv = [action] + argv if action else argv
     if '-h' in argv or '--help' in argv:
@@ -140,23 +153,73 @@ async def runUtility(util, action=None, argv=None):  # Raises InvalidUsage.
     return success, stdout, stderr
 
 async def runUtilityCLI(cli):
-    name = cli.get('<utility>')
-    util = loadUtility(name)
-    if util:
-        argv = cli.get('<utility-args>')
-        action = None if lget(argv, 0, '-').startswith('-') else argv.pop(0)
-        try:
-            success, stdout, stderr = await runUtility(util, action, argv)
-        except InvalidUsage as e:
-            print(e.message)
-        else:
-            if success:
-                print(stdout, end='')
-                if stderr:
-                    print(f'\nstderr: {stderr}', end='')
-    else:
-        print(f'No such utility named "{name}".')
+    utils = discoverAllUtilities(nativeReady=True)
+    api = buildAPI(utils)
 
+    action = cli.get('<action>')
+    argv = cli.get('<action-args>')
+    resource = cli.get('<resource>')
+    if resource in api:
+        if action and action.startswith('-'):  # Option, like -o, not an action.
+            argv.insert(0, action)
+            action = None
+
+        # If no action was provided, but <resource> only has one available
+        # action, default to that action.
+        action = action or defaultResourceAction(api, resource)
+
+        util = api[resource].get(action)
+        if util:
+            try:
+                success, stdout, stderr = await runUtility(util, action, argv)
+            except InvalidUsage as e:
+                print(e.message)
+            else:
+                if success:
+                    print(stdout, end='')
+                    if stderr:
+                        print(f'\nstderr: {stderr}', end='')
+        else:
+            print(
+                f'No such action "{action}" for resource "{resource}".'
+                ' Did you mispell it?')
+    else:
+        print(f'No such resource named "{resource}". Did you mispell it?')
+
+def listAPICLI(cli):
+    # TODO(grun): Print usage, too. That is, instead of just printing
+    #
+    #   base64
+    #     encode
+    #     decode
+    #
+    # print the full usage, like
+    #
+    #   base64
+    #     encode [INPUT] [options]
+    #     decode [INPUT] [options]
+    #
+    utils = discoverAllUtilities()    
+    api = buildAPI(utils)
+    for i, (resource, actions) in enumerate(api.items()):
+        print(end='' if i == 0 else '\n')
+        print(f'{resource}')
+        for action in actions:
+            print(f'  {action}')
+
+def listUtilitiesCLI(cli):
+    utils = discoverAllUtilities()    
+    api = buildAPI(utils)
+    for i, util in enumerate(utils):
+        print(end='' if i == 0 else '\n')
+        wr = '%sWeb' % ('' if util.isWebReady() else '*Not* ')
+        nr = '%sNative' % ('' if util.isNativeReady() else '*Not* ')
+        print(f'{util.name} ({util.displayName}): [{wr} Ready, {nr} Ready]')
+
+        usage = docopt.parse_section('usage:', util.usage)[0]
+        for line in usage.split(':', 1)[-1].strip().splitlines():
+            print(f'  %s' % line.strip())
+        
 def buildUtilitiesCLI(cli):
     tobuild = []
 
@@ -166,7 +229,7 @@ def buildUtilitiesCLI(cli):
         if util:
             tobuild.append(util)
         else:
-            print(f'No such utility named "{name}".')
+            print(f'No such utility named "{name}". Did you mispell it?')
     elif cli.get('all'):
         tobuild = discoverAllUtilities(webReady=False, nativeReady=False)
 
@@ -179,14 +242,27 @@ def buildUtilitiesCLI(cli):
             with printDoneOnCompletion(f'Building {util.name} native...'):
                 util.buildNativeDistribution()
 
+
+class UtilbinHTTPServer(PlainHTTPServer):
+    def __init__(self, api, wrapper=None):
+        super().__init__(wrapper)
+        self.api = api
+
+
 class UtilbinRequestHandler(PlainHTTPSocketWrapper):
-    async def handleRequest(self, req):
+    # TODO(grun): Re-implement handleRequest() to stream POST data into the
+    # spawned utility's stdin. In other words, don't buffer it.
+    async def handleRequest(self, req, data=None):
+        api = self.server.api
         f = furl(req.target.decode('utf8'))
         argv = urlToArgv(f.url)
-        name = f.path.segments[0]
-        action = lget(f.path.segments, 1)
+        resource = f.path.segments[0]
+        action = lget(f.path.segments, 1, defaultResourceAction(api, resource))
 
-        util = loadUtility(name)
+        if data:
+            argv.insert(0, data)
+
+        util = api.get(resource, {}).get(action)
         if util:
             try:
                 success, stdout, stderr = await runUtility(util, action, argv)
@@ -198,12 +274,15 @@ class UtilbinRequestHandler(PlainHTTPSocketWrapper):
         else:
             await self.sendTextResponse(404, 'Utility not found')
 
+
 def listenServerCLI(cli):
     interface = '127.0.0.1'
     port = int(cli.get('--port') or '0') or DEFAULT_PORT
     print(f'Listening for requests on http://{interface}:{port}/...')
 
-    server = PlainHTTPServer(UtilbinRequestHandler)
+    utils = discoverAllUtilities(nativeReady=True)
+    api = buildAPI(utils)
+    server = UtilbinHTTPServer(api, UtilbinRequestHandler)
     if cli.get('[TODO-DAEMON-MODE]'):  # Daemon mode.
         raise NotImplementedError  # TODO(grun): Implement daemonization.
     else:  # Listen mode.
@@ -220,6 +299,10 @@ def main():
         curio.run(runUtilityCLI, cli)
     elif cli.get('build'):
         buildUtilitiesCLI(cli)
+    elif cli.get('list') and cli.get('api'):
+        listAPICLI(cli)
+    elif cli.get('list') and cli.get('utilities'):
+        listUtilitiesCLI(cli)
     else:  # Daemon and listen mode.
         listenServerCLI(cli)
 

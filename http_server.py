@@ -38,7 +38,8 @@ def callableAttr(obj, attr):
 class PlainHTTPSocketWrapper:
     _connectionIterator = count()  # Unique int per connection. For debugging.
 
-    def __init__(self, sock, maxRecvSize=None):
+    def __init__(self, server, sock, maxRecvSize=None):
+        self.server = server
         self.sock = sock
         self.http = h11.Connection(h11.SERVER)
         self.uid = next(self._connectionIterator)
@@ -51,7 +52,7 @@ class PlainHTTPSocketWrapper:
         while True:
             event = self.http.next_event()
             if event is h11.NEED_DATA:
-                await self._readFromClient()
+                await self._readDataFromClient()
                 continue
             return event
 
@@ -89,7 +90,7 @@ class PlainHTTPSocketWrapper:
             traceback.print_exception(None, exc, exc.__traceback__)
 
     async def handleRequest(self, req):
-        await self.sendTextResponse(200, 'hi')
+        await self.sendTextResponse(200, 'hello')
 
     async def closeConnection(self):
         # When this method is called, it's because we definitely want to kill
@@ -101,9 +102,9 @@ class PlainHTTPSocketWrapper:
         # let it raise an exception if that violates the protocol.)
         #
         # Curio bug: doesn't expose shutdown()
-        with self.sock.blocking() as real_sock:
+        with self.sock.blocking() as sock:
             try:
-                real_sock.shutdown(SHUT_WR)
+                sock.shutdown(SHUT_WR)
             except OSError:
                 return  # Connection already closed.
 
@@ -136,7 +137,7 @@ class PlainHTTPSocketWrapper:
             headers.append(('Content-Length', str(contentLength)))
         return headers
 
-    async def _readFromClient(self):
+    async def _readDataFromClient(self):
         if self.http.they_are_waiting_for_100_continue:
             headers = self.constructBasicHeaders()
             resp = h11.InformationalResponse(status_code=100, headers=headers)
@@ -172,15 +173,26 @@ class PlainHTTPServer:
             kernel.run(shutdown=True)
 
     async def handleConnection(self, sock, addr):
-        conn = self.SocketWrapper(sock, maxRecvSize=self.maxReceiveSize)
+        conn = self.SocketWrapper(self, sock, maxRecvSize=self.maxReceiveSize)
 
         while True:  # Process all requests on this connection.
             try:
                 async with curio.timeout_after(self.connectionTimeout):
-                    event = await conn.getNextEvent()
-                    if type(event) is h11.Request:
-                        req = event
-                        await conn.handleRequest(req)
+                    req = await conn.getNextEvent()
+                    if type(req) is h11.Request:
+                        # Collect POST data.
+                        #
+                        # TODO(grun): Re-implement handleRequest() to handle
+                        # streamed POST data, not buffer it.
+                        data = ''
+                        while True:
+                            event = await conn.getNextEvent()
+                            if type(event) is h11.Data:
+                                data += event.data.decode('ascii')
+                            elif type(event) is h11.EndOfMessage:
+                                break
+
+                        await conn.handleRequest(req, data)
             except Exception as exc:
                 print(f'Unhandled exception during response handler:')
                 print(traceback.format_exc())
@@ -193,7 +205,8 @@ class PlainHTTPServer:
                 try:
                     conn.http.start_next_cycle()
                 except h11.ProtocolError:
-                    exc = RuntimeError(f'Unexpected HTTP state {conn.http.states}.')
+                    msg = f'Unexpected HTTP state {conn.http.states}.'
+                    exc = RuntimeError(msg)
                     await conn.sendExceptionResponse(exc)
                     await conn.closeConnection()
                     break

@@ -14,8 +14,8 @@ from ..utility import Category, TextUtility
 USAGE = """Base64 Codec
 
 Usage:
-  base64codec encode [INPUT]
-  base64codec decode [INPUT]
+  base64 encode [INPUT]
+  base64 decode [INPUT]
 
 Options:
   -h --help    Show this help information.
